@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import {Booking} from './booking.model';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {AuthService} from '../auth/auth.service';
-import {delay, switchMap, take, tap} from 'rxjs/operators';
+import {delay, map, switchMap, take, tap} from 'rxjs/operators';
 import {HttpClient} from '@angular/common/http';
+import {Place} from '../places/place.model';
 
 interface FirebaseBooking {
   firstName: string;
@@ -21,24 +22,33 @@ interface FirebaseBooking {
   providedIn: 'root'
 })
 export class BookingsService {
-  private _bookings = new BehaviorSubject<Booking[]>([{
-    id: 'a',
-    firstName: 'aa',
-    lastName: 'aaa',
-    placeId: '1',
-    placeTitle: 'A',
-    placeImage: 'B',
-    userId: 'd',
-    guestNumber: 3,
-    bookedFrom: new Date(),
-    bookedTo: new Date()
-  }]);
+  private _bookings = new BehaviorSubject<Booking[]>([]);
 
   constructor(private authService: AuthService,
               private http: HttpClient) { }
 
   get bookings() {
     return this._bookings.asObservable();
+  }
+
+  fetchPlaces() {
+    const userId = this.authService.userId;
+    return this.http.get<{[key: string]: FirebaseBooking}>(`https://ionic-course-afe24.firebaseio.com/bookings.json` +
+        `?orderBy="userId"&equalTo="${userId}"`)
+      .pipe(map(resData => {
+        const bookings = [];
+        for (const key in resData) {
+          if (resData.hasOwnProperty(key)) {
+            const bookingData = resData[key];
+            bookings.push(new Booking(key, bookingData.placeId, bookingData.userId, bookingData.placeTitle, bookingData.placeImage,
+              bookingData.firstName, bookingData.lastName, bookingData.guestNumber, new Date(bookingData.bookedFrom),
+              new Date(bookingData.bookedTo)));
+          }
+        }
+        return bookings;
+      }), tap(places => {
+        this._bookings.next(places);
+      }));
   }
 
   addBooking(placeId: string, placeTitle: string, placeImage: string, firstName: string, lastName: string, guestNo: number,
@@ -60,8 +70,13 @@ export class BookingsService {
   }
 
   cancelBooking(id: string) {
-    return this.bookings.pipe(take(1), delay(1000), tap( bookings => {
-      this._bookings.next(bookings.filter( booking => booking.id !== id));
-    }));
+    return this.http.delete(`https://ionic-course-afe24.firebaseio.com/bookings/${id}.json`)
+      .pipe(switchMap( () => {
+        return this.bookings;
+      }),
+      take(1),
+      tap( bookings => {
+        this._bookings.next(bookings.filter( booking => booking.id !== id));
+      }));
   }
 }

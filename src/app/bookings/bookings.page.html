@@ -8,13 +8,19 @@
 </ion-header>
 
 <ion-content>
-  <ion-grid>
+  <div text-center padding *ngIf="isLoading">
+    <ion-spinner color="primary"></ion-spinner>
+  </div>
+  <ion-grid *ngIf="!isLoading">
     <ion-row justify-content-center>
       <ion-col sizeMd="6" *ngIf="loadedBookings && loadedBookings.length > 0; else noBookings">
         <ion-list>
           <ion-item-sliding *ngFor="let booking of loadedBookings" #sliding>
             <ion-item>
-              <ion-label>
+              <ion-thumbnail>
+                <ion-img [src]="booking.placeImage"></ion-img>
+              </ion-thumbnail>
+              <ion-label padding-start>
                 <h5>{{ booking.placeTitle }}</h5>
                 <p>Guests: {{ booking.guestNumber }}</p>
               </ion-label>

@@ -10,6 +10,7 @@ import {Subscription} from 'rxjs';
   styleUrls: ['./bookings.page.scss'],
 })
 export class BookingsPage implements OnInit, OnDestroy {
+  isLoading = false;
   subscriptions: Subscription[] = [];
   loadedBookings: Booking[];
   constructor(private bookingsService: BookingsService,
@@ -20,6 +21,13 @@ export class BookingsPage implements OnInit, OnDestroy {
       console.log(bookings);
       this.loadedBookings = bookings;
     }));
+  }
+
+  ionViewWillEnter() {
+    this.isLoading = true;
+    this.bookingsService.fetchPlaces().subscribe(() => {
+      this.isLoading = false;
+    });
   }
 
   ngOnDestroy(): void {
